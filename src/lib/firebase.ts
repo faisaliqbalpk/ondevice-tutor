@@ -15,9 +15,11 @@ export const firebaseApp = initializeApp({
   appId: env.VITE_FIREBASE_APP_ID,
 });
 
-// App Check is required by Firebase AI Logic. Debug tokens are accepted for judging.
-if (env.VITE_APPCHECK_DEBUG === 'true') {
-  (self as unknown as { FIREBASE_APPCHECK_DEBUG_TOKEN: boolean }).FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+// App Check is required by Firebase AI Logic.
+// Debug tokens are only read in dev builds, so they never ship to the hosted app.
+if (env.DEV && (env.VITE_APPCHECK_DEBUG_TOKEN || env.VITE_APPCHECK_DEBUG === 'true')) {
+  (self as unknown as { FIREBASE_APPCHECK_DEBUG_TOKEN: string | boolean }).FIREBASE_APPCHECK_DEBUG_TOKEN =
+    env.VITE_APPCHECK_DEBUG_TOKEN || true;
 }
 if (env.VITE_RECAPTCHA_ENTERPRISE_SITE_KEY) {
   initializeAppCheck(firebaseApp, {
