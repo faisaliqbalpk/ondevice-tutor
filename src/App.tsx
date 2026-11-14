@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { waitForUser } from './lib/firebase';
-import { deviceStatus, prepareDeviceModel, type DeviceStatus } from './lib/ai';
+import { chromeVersion, deviceStatus, prepareDeviceModel, type DeviceStatus } from './lib/ai';
 import { addStudent, watchAlerts, watchStudents, type Alert, type Student } from './lib/mastery';
 import { MarkSheet } from './components/MarkSheet';
 import { Practice } from './components/Practice';
@@ -27,8 +27,8 @@ const STATUS_TEXT: Record<DeviceStatus, string> = {
   available: 'Gemini Nano ready on this device',
   downloadable: 'Gemini Nano can be downloaded',
   downloading: 'Gemini Nano is downloading',
-  unavailable: 'Gemini Nano unavailable, using cloud',
-  unsupported: 'This browser has no on-device model, using cloud',
+  unavailable: 'Gemini Nano not available on this device, using cloud',
+  unsupported: 'On-device AI is off in this browser, using cloud',
 };
 
 function useOnline() {
@@ -56,6 +56,7 @@ export default function App() {
   const [preset, setPreset] = useState<{ title: string; key: string } | null>(null);
   const [status, setStatus] = useState<DeviceStatus>('unsupported');
   const [progress, setProgress] = useState<number | null>(null);
+  const [showHelp, setShowHelp] = useState(false);
   const [toasts, setToasts] = useState<string[]>([]);
   const [newName, setNewName] = useState('');
   const [newGrade, setNewGrade] = useState('Grade 6');
@@ -135,10 +136,52 @@ export default function App() {
               Prepare on-device AI
             </button>
           )}
-          {progress !== null && <span className="muted">{Math.round(progress * 100)}%</span>}
+          {(status === 'unsupported' || status === 'unavailable') && (
+            <button className="secondary" onClick={() => setShowHelp((x) => !x)}>
+              {showHelp ? 'Hide help' : 'Turn on on-device AI'}
+            </button>
+          )}
+          {progress !== null && <span className="muted">Downloading {Math.round(progress * 100)}%</span>}
           <span className={`pill ${online ? '' : 'offline'}`}>{online ? 'Online' : 'Offline'}</span>
         </div>
       </header>
+
+      {showHelp && status !== 'available' && (
+        <div className="panel help no-print">
+          <h3>Turn on Gemini Nano in Chrome</h3>
+          <ol>
+            <li>
+              Use desktop Chrome 139 or newer (Windows, macOS, Linux or ChromeOS).{' '}
+              <span className="muted">
+                {chromeVersion() ? `You have Chrome ${chromeVersion()}.` : 'This browser does not look like Chrome.'}
+              </span>
+            </li>
+            <li>
+              Open <code>chrome://flags/#prompt-api-for-gemini-nano-multimodal-input</code> and set it to{' '}
+              <strong>Enabled</strong>.
+            </li>
+            <li>
+              Open <code>chrome://flags/#optimization-guide-on-device-model</code> and set it to{' '}
+              <strong>Enabled BypassPerfRequirement</strong>.
+            </li>
+            <li>Click Relaunch, then come back to this page.</li>
+            <li>
+              Check <code>chrome://on-device-internals</code>: under Model Status it should say the model is ready or
+              downloading. The model needs about 22 GB of free disk space.
+            </li>
+          </ol>
+          <p className="muted">Chrome blocks links to chrome:// pages, so copy each address into the address bar.</p>
+          <button
+            onClick={async () => {
+              const s = await deviceStatus();
+              setStatus(s);
+              if (s === 'available') setShowHelp(false);
+            }}
+          >
+            Check again
+          </button>
+        </div>
+      )}
 
       {authError && <p className="error">Sign-in failed: {authError}. Check your Firebase config.</p>}
 

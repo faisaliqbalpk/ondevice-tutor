@@ -101,12 +101,20 @@ export async function deviceStatus(): Promise<DeviceStatus> {
   const lm = (globalThis as unknown as { LanguageModel?: LanguageModelGlobal }).LanguageModel;
   if (!lm) return 'unsupported';
   try {
-    return await lm.availability({
-      expectedInputs: [{ type: 'text' }, { type: 'image' }],
-    });
+    // Prefer the multimodal model (needed to read answer-sheet photos on-device).
+    const multimodal = await lm.availability({ expectedInputs: [{ type: 'text' }, { type: 'image' }] });
+    if (multimodal !== 'unavailable') return multimodal;
+    // Text-only Nano still runs the interview, quizzes and tutor on-device.
+    return await lm.availability();
   } catch {
     return 'unavailable';
   }
+}
+
+/** Chrome major version, or null when not Chrome. */
+export function chromeVersion(): number | null {
+  const m = navigator.userAgent.match(/Chrome\/(\d+)/);
+  return m && !/Edg\//.test(navigator.userAgent) ? Number(m[1]) : null;
 }
 
 /** Must be called from a user gesture (click). Downloads Gemini Nano if needed. */
