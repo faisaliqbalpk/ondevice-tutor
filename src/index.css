@@ -113,3 +113,21 @@ details { font-size: 0.9rem; color: var(--muted); }
   .bubble { max-width: 95%; }
 }
 button { white-space: nowrap; flex: none; }
+.level { font-size: 0.85rem; font-weight: 600; padding: 2px 10px; border-radius: 999px; }
+.level.needs-support { background: var(--bad-bg); color: var(--bad); }
+.level.on-track { background: var(--cloud-bg); color: var(--cloud); }
+.level.ahead { background: var(--device-bg); color: var(--device); }
+.good-text { color: var(--device); }
+.bad-text { color: var(--bad); }
+button.small { padding: 4px 10px; font-size: 0.8rem; }
+.turn { display: flex; flex-direction: column; gap: 6px; }
+.bubble.good { border-color: var(--device); }
+.bubble.soft { border-color: var(--cloud); }
+li.answer { font-weight: 600; color: var(--device); }
+.print-only { display: none; }
+@media print {
+  .no-print, nav, header, .students, .toasts { display: none !important; }
+  body { background: #fff; color: #000; }
+  .print-only { display: block; font-size: 12pt; }
+  .print-q { margin-bottom: 18pt; break-inside: avoid; }
+}

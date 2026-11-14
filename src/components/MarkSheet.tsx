@@ -11,11 +11,13 @@ interface Props {
   uid: string;
   student: Student;
   onAlerts: (a: string[]) => void;
+  /** Answer key from a saved assessment ("Mark paper copy"). */
+  preset?: { title: string; key: string } | null;
 }
 
-export function MarkSheet({ uid, student, onAlerts }: Props) {
+export function MarkSheet({ uid, student, onAlerts, preset }: Props) {
   const [image, setImage] = useState<{ part: Part; previewUrl: string } | null>(null);
-  const [answerKey, setAnswerKey] = useState('1. 12\n2. 3/4\n3. 45 degrees');
+  const [answerKey, setAnswerKey] = useState(preset?.key ?? '1. 12\n2. 3/4\n3. 45 degrees');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [needsConsent, setNeedsConsent] = useState(false);
@@ -64,6 +66,11 @@ export function MarkSheet({ uid, student, onAlerts }: Props) {
       <p className="muted">
         The photo is read by Gemini Nano on this device. It is only sent to the cloud if you say so.
       </p>
+      {preset && (
+        <p>
+          Using the answer key from <strong>{preset.title}</strong>.
+        </p>
+      )}
       <div className="grid2">
         <label className="field">
           <span>Answer sheet photo</span>

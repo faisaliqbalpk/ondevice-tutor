@@ -27,6 +27,22 @@ export interface Student {
   grade: string;
   skills: Record<string, SkillStat>;
   mistakes: string[];
+  /** Set by the onboarding interview. */
+  onboarded?: boolean;
+  subjects?: string[];
+  /** Placement level per subject, e.g. "needs support", "on track", "ahead". */
+  levels?: Record<string, string>;
+  /** Cloud-written study plan (from an anonymous summary). */
+  plan?: string;
+}
+
+export interface Assessment {
+  id: string;
+  title: string;
+  subject: string;
+  grade: string;
+  questions: import('./tutor').AssessmentQuestion[];
+  createdAt?: { seconds: number };
 }
 
 export interface Alert {
@@ -39,23 +55,58 @@ export interface Alert {
 
 const students = (uid: string) => collection(db, 'users', uid, 'students');
 const alerts = (uid: string) => collection(db, 'users', uid, 'alerts');
+const assessments = (uid: string) => collection(db, 'users', uid, 'assessments');
+
+export function updateStudent(uid: string, id: string, fields: Partial<Omit<Student, 'id'>>) {
+  void updateDoc(doc(students(uid), id), fields);
+}
+
+export function watchAssessments(uid: string, cb: (a: Assessment[]) => void): Unsubscribe {
+  return onSnapshot(
+    query(assessments(uid), orderBy('createdAt', 'desc'), limit(30)),
+    (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Assessment, 'id'>) }))),
+    logError('assessments'),
+  );
+}
+
+export function saveAssessment(uid: string, a: Omit<Assessment, 'id' | 'createdAt'>): string {
+  const ref = doc(assessments(uid));
+  void setDoc(ref, { ...a, createdAt: serverTimestamp() });
+  return ref.id;
+}
+
+/** Answer key text in the format the sheet marker expects. */
+export function answerKeyText(a: Pick<Assessment, 'questions'>): string {
+  return a.questions
+    .map((q, i) => {
+      const j = q.choices.indexOf(q.answer);
+      return `${i + 1}. ${q.type === 'mcq' && j >= 0 ? `${'ABCD'[j]}) ` : ''}${q.answer}`;
+    })
+    .join('\n');
+}
+
+const logError = (what: string) => (e: Error) => console.error(`Firestore ${what}:`, e.message);
 
 export function watchStudents(uid: string, cb: (s: Student[]) => void): Unsubscribe {
-  return onSnapshot(students(uid), (snap) =>
-    cb(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Student, 'id'>) }))),
+  return onSnapshot(
+    students(uid),
+    (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Student, 'id'>) }))),
+    logError('students'),
   );
 }
 
 export function watchAlerts(uid: string, cb: (a: Alert[]) => void): Unsubscribe {
-  return onSnapshot(query(alerts(uid), orderBy('at', 'desc'), limit(20)), (snap) =>
-    cb(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Alert, 'id'>) }))),
+  return onSnapshot(
+    query(alerts(uid), orderBy('at', 'desc'), limit(20)),
+    (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Alert, 'id'>) }))),
+    logError('alerts'),
   );
 }
 
 export async function addStudent(uid: string, nickname: string, grade: string): Promise<string> {
   const ref = doc(students(uid));
   // Writes resolve immediately offline; Firestore syncs when back online.
-  void setDoc(ref, { nickname, grade, skills: {}, mistakes: [] });
+  void setDoc(ref, { nickname, grade, skills: {}, mistakes: [], onboarded: false });
   return ref.id;
 }
 
@@ -74,9 +125,14 @@ export function weakestSkills(student: Student, n = 2): string[] {
 
 export function masterySummary(student: Student): string {
   const entries = Object.entries(student.skills);
-  if (!entries.length) return `${student.grade} student, no marked work yet.`;
+  const levels = Object.entries(student.levels ?? {});
+  const header =
+    `${student.grade} student.` +
+    (levels.length ? ` Placement: ${levels.map(([s, l]) => `${s} ${l}`).join(', ')}.` : '') +
+    '\n';
+  if (!entries.length) return `${header}No marked work yet.`;
   return (
-    `${student.grade} student.\n` +
+    header +
     entries
       .map(([k, s]) => `- ${k}: ${Math.round(mastery(s) * 100)}% recent mastery (${s.total} attempts)`)
       .join('\n') +

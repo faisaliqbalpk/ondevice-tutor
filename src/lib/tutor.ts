@@ -185,3 +185,194 @@ export async function tutorReply(
     prompt,
   );
 }
+
+// ---------- Onboarding interview (on-device, adaptive) ----------
+
+export interface InterviewQuestion {
+  question: string;
+  skill: string;
+  subject: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+}
+
+export interface InterviewStep extends InterviewQuestion {
+  /** Evaluation of the student's previous answer. */
+  isCorrect: boolean;
+  feedback: string;
+}
+
+const questionProps = {
+  question: { type: 'string' },
+  skill: { type: 'string' },
+  subject: { type: 'string' },
+  difficulty: { type: 'string', enum: ['easy', 'medium', 'hard'] },
+};
+
+const INTERVIEW_SYSTEM =
+  'You are a friendly tutor running a short placement interview with a student, out loud. ' +
+  'Ask one short question at a time that can be answered in a sentence or a number. ' +
+  'Adapt: after a correct answer ask something harder, after a wrong one ask something easier. ' +
+  'Never ask for personal information.';
+
+export async function firstInterviewQuestion(
+  grade: string,
+  subject: string,
+  struggles: string,
+): Promise<AiResult<InterviewQuestion>> {
+  return run<InterviewQuestion>(
+    'Interview question',
+    {
+      mode: InferenceMode.PREFER_ON_DEVICE,
+      system: INTERVIEW_SYSTEM,
+      schema: { type: 'object', properties: questionProps, required: Object.keys(questionProps) },
+    },
+    `Student: ${grade}. Subject: ${subject}.` +
+      (struggles ? ` They said they find this hard: "${struggles}".` : '') +
+      ' Ask a medium-difficulty opening question for this subject at their grade level.',
+  );
+}
+
+export async function nextInterviewStep(
+  grade: string,
+  previous: InterviewQuestion,
+  answer: string,
+  nextSubject: string,
+): Promise<AiResult<InterviewStep>> {
+  const props = {
+    isCorrect: { type: 'boolean' },
+    feedback: { type: 'string' },
+    ...questionProps,
+  };
+  return run<InterviewStep>(
+    'Interview step',
+    {
+      mode: InferenceMode.PREFER_ON_DEVICE,
+      system: INTERVIEW_SYSTEM,
+      schema: { type: 'object', properties: props, required: Object.keys(props) },
+    },
+    `Student: ${grade}.\n` +
+      `Previous question (${previous.subject}, ${previous.difficulty}, skill "${previous.skill}"): ${previous.question}\n` +
+      `Student answered: ${answer || '(no answer)'}\n\n` +
+      'First judge whether the answer is correct and give one short, encouraging sentence of feedback. ' +
+      `Then ask the next question, about ${nextSubject}` +
+      (nextSubject === previous.subject ? ', adapting the difficulty to how they did.' : ', at medium difficulty.'),
+  );
+}
+
+// ---------- Study plan (prefer cloud, anonymous summary only) ----------
+
+export async function studyPlan(grade: string, summary: string): Promise<AiResult<string>> {
+  return run<string>(
+    'Study plan',
+    {
+      mode: InferenceMode.PREFER_IN_CLOUD,
+      system: 'You are an expert learning coach. Write practical, encouraging plans in plain language.',
+    },
+    `Write a 2-week study plan for a ${grade} student.\n` +
+      `Their placement results:\n${summary}\n\n` +
+      'Use short sections per week, 15-20 minutes a day, and focus on the weakest skills first. ' +
+      'End with 3 signs that they are improving. Keep it under 250 words.',
+  );
+}
+
+// ---------- Assessments (on-device question writing and marking) ----------
+
+export interface AssessmentQuestion {
+  type: 'mcq' | 'short';
+  prompt: string;
+  choices: string[];
+  answer: string;
+  skill: string;
+}
+
+export interface AssessmentDraft {
+  title: string;
+  questions: AssessmentQuestion[];
+}
+
+const assessmentSchema = {
+  type: 'object',
+  properties: {
+    title: { type: 'string' },
+    questions: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          type: { type: 'string', enum: ['mcq', 'short'] },
+          prompt: { type: 'string' },
+          choices: { type: 'array', items: { type: 'string' } },
+          answer: { type: 'string' },
+          skill: { type: 'string' },
+        },
+        required: ['type', 'prompt', 'choices', 'answer', 'skill'],
+      },
+    },
+  },
+  required: ['title', 'questions'],
+};
+
+export async function makeAssessment(opts: {
+  subject: string;
+  topics: string;
+  grade: string;
+  level: string;
+  count: number;
+  mix: 'mcq' | 'short' | 'mixed';
+}): Promise<AiResult<AssessmentDraft>> {
+  const mix =
+    opts.mix === 'mcq'
+      ? 'all multiple choice'
+      : opts.mix === 'short'
+        ? 'all short answer'
+        : 'about half multiple choice and half short answer';
+  return run<AssessmentDraft>(
+    'Create assessment',
+    {
+      mode: InferenceMode.PREFER_ON_DEVICE,
+      system:
+        'You write clear, fair school assessments. Multiple-choice questions have exactly 4 choices and ' +
+        '"answer" is the exact text of the correct choice. Short-answer questions have an empty choices list and ' +
+        'a short model answer. Every question has a 2-4 word skill tag.',
+      schema: assessmentSchema,
+    },
+    `Write a ${opts.count}-question ${opts.subject} assessment for a ${opts.grade} student working ${opts.level}.\n` +
+      (opts.topics ? `Topics: ${opts.topics}.\n` : '') +
+      `Question types: ${mix}. Order the questions from easier to harder.`,
+  );
+}
+
+export interface ShortAnswerMark {
+  isCorrect: boolean;
+  feedback: string;
+}
+
+export async function markShortAnswers(
+  items: { prompt: string; expected: string; given: string }[],
+): Promise<AiResult<{ marks: ShortAnswerMark[] }>> {
+  return run<{ marks: ShortAnswerMark[] }>(
+    'Mark short answers',
+    {
+      mode: InferenceMode.PREFER_ON_DEVICE,
+      system:
+        'You mark short answers fairly. Accept answers that mean the same as the model answer, ' +
+        'including different wording or equivalent numbers. Give one short sentence of feedback each.',
+      schema: {
+        type: 'object',
+        properties: {
+          marks: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: { isCorrect: { type: 'boolean' }, feedback: { type: 'string' } },
+              required: ['isCorrect', 'feedback'],
+            },
+          },
+        },
+        required: ['marks'],
+      },
+    },
+    `Mark these ${items.length} answers, in order:\n` +
+      items.map((it, i) => `${i + 1}. Q: ${it.prompt}\n   Model answer: ${it.expected}\n   Student: ${it.given || '(blank)'}`).join('\n'),
+  );
+}

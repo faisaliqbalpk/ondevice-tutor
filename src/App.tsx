@@ -7,10 +7,15 @@ import { Practice } from './components/Practice';
 import { TutorChat } from './components/TutorChat';
 import { Progress } from './components/Progress';
 import { Ledger } from './components/Ledger';
+import { Onboarding } from './components/Onboarding';
+import { Assessments } from './components/Assessments';
+import { answerKeyText, type Assessment } from './lib/mastery';
 import { errorText } from './lib/errors';
 
-type Tab = 'mark' | 'practice' | 'tutor' | 'progress' | 'privacy';
+type Tab = 'start' | 'assess' | 'mark' | 'practice' | 'tutor' | 'progress' | 'privacy';
 const TABS: { id: Tab; label: string }[] = [
+  { id: 'start', label: 'Interview' },
+  { id: 'assess', label: 'Assessments' },
   { id: 'mark', label: 'Mark sheet' },
   { id: 'practice', label: 'Practice' },
   { id: 'tutor', label: 'Tutor' },
@@ -47,7 +52,8 @@ export default function App() {
   const [students, setStudents] = useState<Student[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [current, setCurrent] = useState<string | null>(null);
-  const [tab, setTab] = useState<Tab>('mark');
+  const [tab, setTab] = useState<Tab>('start');
+  const [preset, setPreset] = useState<{ title: string; key: string } | null>(null);
   const [status, setStatus] = useState<DeviceStatus>('unsupported');
   const [progress, setProgress] = useState<number | null>(null);
   const [toasts, setToasts] = useState<string[]>([]);
@@ -97,14 +103,26 @@ export default function App() {
     if (!uid || !newName.trim()) return;
     const id = await addStudent(uid, newName.trim(), newGrade);
     setCurrent(id);
+    setTab('start');
     setNewName('');
   }
 
   const student = students.find((s) => s.id === current) ?? null;
 
+  function pickStudent(id: string) {
+    setCurrent(id);
+    const s = students.find((x) => x.id === id);
+    if (s && !s.onboarded) setTab('start');
+  }
+
+  function markPrinted(a: Assessment) {
+    setPreset({ title: a.title, key: answerKeyText(a) });
+    setTab('mark');
+  }
+
   return (
     <div className="app">
-      <header>
+      <header className="no-print">
         <div>
           <h1>Nano Tutor</h1>
           <p className="muted">A private tutor that marks, remembers and teaches on your device.</p>
@@ -124,9 +142,9 @@ export default function App() {
 
       {authError && <p className="error">Sign-in failed: {authError}. Check your Firebase config.</p>}
 
-      <div className="students">
+      <div className="students no-print">
         {students.map((s) => (
-          <button key={s.id} className={s.id === current ? 'chip active' : 'chip'} onClick={() => setCurrent(s.id)}>
+          <button key={s.id} className={s.id === current ? 'chip active' : 'chip'} onClick={() => pickStudent(s.id)}>
             {s.nickname} <span className="muted">{s.grade}</span>
           </button>
         ))}
@@ -143,7 +161,7 @@ export default function App() {
         </form>
       </div>
 
-      <nav>
+      <nav className="no-print">
         {TABS.map((t) => (
           <button key={t.id} className={t.id === tab ? 'tab active' : 'tab'} onClick={() => setTab(t.id)}>
             {t.label}
@@ -158,8 +176,12 @@ export default function App() {
           <p className="muted">Connecting…</p>
         ) : !student ? (
           <p className="panel muted">Add a student to get started. Use a nickname, not a full name.</p>
+        ) : tab === 'start' ? (
+          <Onboarding key={student.id} uid={uid} student={student} onAlerts={onAlerts} onDone={() => setTab('assess')} />
+        ) : tab === 'assess' ? (
+          <Assessments key={student.id} uid={uid} student={student} onAlerts={onAlerts} onMarkPrinted={markPrinted} />
         ) : tab === 'mark' ? (
-          <MarkSheet uid={uid} student={student} onAlerts={onAlerts} />
+          <MarkSheet key={`${student.id}:${preset?.key ?? ''}`} uid={uid} student={student} onAlerts={onAlerts} preset={preset} />
         ) : tab === 'practice' ? (
           <Practice key={student.id} uid={uid} student={student} onAlerts={onAlerts} />
         ) : tab === 'tutor' ? (

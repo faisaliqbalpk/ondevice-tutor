@@ -1,7 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'firebase/app-check';
 import { getAI, GoogleAIBackend } from 'firebase/ai';
-import { getAuth, signInAnonymously, onAuthStateChanged, type User } from 'firebase/auth';
+import { getAuth, signInAnonymously, type User } from 'firebase/auth';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
 
 const env = import.meta.env;
@@ -37,17 +37,22 @@ export const db = initializeFirestore(firebaseApp, {
 
 export const auth = getAuth(firebaseApp);
 
+let userPromise: Promise<User> | null = null;
+
+/**
+ * Resolves with the signed-in user, signing in anonymously once if needed.
+ * Memoized so concurrent callers (React StrictMode runs effects twice) never create
+ * two anonymous users, which would leave listeners on the wrong user's path.
+ */
 export function waitForUser(): Promise<User> {
-  return new Promise((resolve, reject) => {
-    const unsub = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        unsub();
-        resolve(user);
-      }
-    });
-    signInAnonymously(auth).catch((e) => {
-      // Offline with a cached session is fine; onAuthStateChanged still fires.
-      if (!auth.currentUser) reject(e);
-    });
+  userPromise ??= (async () => {
+    await auth.authStateReady();
+    if (auth.currentUser) return auth.currentUser;
+    const cred = await signInAnonymously(auth);
+    return cred.user;
+  })().catch((e) => {
+    userPromise = null;
+    throw e;
   });
+  return userPromise;
 }

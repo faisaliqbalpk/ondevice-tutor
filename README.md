@@ -12,10 +12,13 @@ Each task picks its inference mode on purpose:
 
 | Task | Mode | Why |
 | --- | --- | --- |
+| Onboarding interview (adaptive, spoken) | `PREFER_ON_DEVICE` | A student's answers about themselves and their level stay on the device |
+| Create an assessment / mark short answers | `PREFER_ON_DEVICE` | Teachers can build and mark tests offline |
 | Mark an answer sheet photo | `ONLY_ON_DEVICE`, cloud only after explicit consent | Children's handwriting and names should not leave the device |
 | Generate a practice quiz | `PREFER_ON_DEVICE` | Works offline in classrooms with no signal |
 | Voice tutor conversation | `PREFER_ON_DEVICE` | Fast, private, free. Chat history and the student's skill profile are stitched into each prompt, because on-device generation is single-turn |
 | "Why was I wrong?" deep explanation | `PREFER_IN_CLOUD` | Benefits from a larger model. Sends only the skill, question and answers, never names or photos |
+| Study plan | `PREFER_IN_CLOUD` | Sends only an anonymous summary: grade, placement levels and skill scores |
 
 Every response shows an **On-device** or **Cloud** badge, read from `response.inferenceSource`. The **Privacy** tab lists every request that ran in the cloud and the exact text that was sent.
 
@@ -23,6 +26,9 @@ The Firebase AI Logic calls live in [`src/lib/ai.ts`](src/lib/ai.ts) and [`src/l
 
 ## Features
 
+- **Onboarding interview:** the student picks subjects and says what they find hard. Nano then runs a short spoken placement interview, adapting difficulty after each answer, and sets a level per subject (needs support, on track, ahead).
+- **Study plan:** a 2-week plan written in the cloud from the anonymous placement summary.
+- **Assessments:** Nano writes multiple-choice and short-answer tests for a subject, topics and level. Take them on screen (short answers are marked on-device), print them with or without an answer key, or mark the paper copies with a photo using the saved key.
 - **Mark sheet:** photo of an answer sheet plus an answer key. Nano reads each answer, marks it, tags the skill, flags low-confidence readings, and gives short feedback.
 - **Skill memory:** a per-student profile of recent mastery per skill, stored in Firestore with offline persistence. No photos are stored.
 - **Practice:** a 5-question quiz targeting the two weakest skills and recent mistakes, with hints.
