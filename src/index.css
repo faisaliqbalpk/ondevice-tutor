@@ -261,3 +261,28 @@ button.grade.easy { background: var(--device); }
 @media (prefers-reduced-motion: reduce) {
   .flash { transition: none; }
 }
+
+/* ---------- Sign up / log in ---------- */
+.auth-page { max-width: 960px; min-height: 100vh; margin: 0 auto; padding: 32px 16px; display: grid; grid-template-columns: 1fr minmax(300px, 400px); gap: 40px; align-items: center; }
+.auth-intro h1 { font-size: 2.2rem; }
+.auth-intro .lead { font-size: 1.15rem; margin-bottom: 16px; }
+.auth-intro ul { padding-left: 1.2rem; color: var(--muted); }
+.auth-intro li { margin: 6px 0; }
+.auth-card { display: flex; flex-direction: column; gap: 12px; padding: 24px; }
+.auth-card h2 { margin: 4px 0 0; }
+.auth-switch { display: grid; grid-template-columns: 1fr 1fr; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 3px; }
+.auth-switch button { background: transparent; color: var(--muted); padding: 6px; }
+.auth-switch button.active { background: var(--panel); color: var(--text); box-shadow: 0 1px 2px rgb(0 0 0 / 0.12); }
+.auth-form { display: flex; flex-direction: column; gap: 12px; }
+button.wide { width: 100%; justify-content: center; padding: 10px 14px; }
+.or { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 0.8rem; }
+.or::before, .or::after { content: ''; flex: 1; border-top: 1px solid var(--line); }
+button.link { background: none; color: var(--accent); padding: 0; text-decoration: underline; }
+.auth-links { margin: 0; min-height: 1em; }
+.auth-card .error, .auth-card .notice { margin: 0; font-size: 0.9rem; }
+.notice { background: var(--ok-bg); padding: 8px 12px; border-radius: 8px; }
+@media (max-width: 720px) {
+  .auth-page { grid-template-columns: 1fr; gap: 20px; align-content: start; min-height: 0; }
+  .auth-intro h1 { font-size: 1.7rem; }
+  .auth-intro ul { display: none; }
+}
