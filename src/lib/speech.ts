@@ -47,11 +47,44 @@ export function listen(onText: (t: string) => void, onDone: (err?: string) => vo
   return () => r.stop();
 }
 
-export function speak(text: string) {
-  if (!('speechSynthesis' in window)) return;
+export interface SpeakOptions {
+  /** Any string (e.g. a persona name): picks a stable voice, pitch and rate for that character. */
+  voiceSeed?: string;
+  onStart?: () => void;
+  onEnd?: () => void;
+}
+
+function hash(s: string): number {
+  let h = 0;
+  for (const c of s) h = (h * 31 + c.charCodeAt(0)) | 0;
+  return Math.abs(h);
+}
+
+export function speak(text: string, opts: SpeakOptions = {}) {
+  if (!('speechSynthesis' in window)) {
+    opts.onEnd?.();
+    return;
+  }
   speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
   u.lang = 'en-US';
   u.rate = 1;
+  if (opts.voiceSeed) {
+    const h = hash(opts.voiceSeed);
+    // Prefer voices that run locally, so persona speech also works offline.
+    const voices = speechSynthesis.getVoices().filter((v) => v.lang.startsWith('en'));
+    const local = voices.filter((v) => v.localService);
+    const pool = local.length ? local : voices;
+    if (pool.length) u.voice = pool[h % pool.length];
+    u.pitch = 0.8 + ((h >> 3) % 5) * 0.1;
+    u.rate = 0.95 + ((h >> 6) % 3) * 0.05;
+  }
+  u.onstart = () => opts.onStart?.();
+  u.onend = () => opts.onEnd?.();
+  u.onerror = () => opts.onEnd?.();
   speechSynthesis.speak(u);
+}
+
+export function stopSpeaking() {
+  if ('speechSynthesis' in window) speechSynthesis.cancel();
 }
