@@ -9,6 +9,7 @@ import {
 } from '../lib/mastery';
 import type { Source } from '../lib/ai';
 import { ErrorNote, SourceBadge } from './common';
+import { saveToBank } from '../lib/study';
 import { errorText } from '../lib/errors';
 import { SUBJECTS } from '../lib/subjects';
 
@@ -304,6 +305,18 @@ function TakeAssessment({
         setSource('on_device');
       }
       setMarks(result);
+      void saveToBank(
+        uid,
+        student.id,
+        qs.map((q, i) => ({
+          prompt: q.prompt,
+          choices: q.type === 'mcq' ? q.choices : [],
+          answer: q.answer,
+          skill: `${assessment.subject.toLowerCase()}: ${q.skill}`,
+          origin: 'assessment' as const,
+          result: result[i].isCorrect,
+        })),
+      );
       onAlerts(
         await recordResults(
           uid,

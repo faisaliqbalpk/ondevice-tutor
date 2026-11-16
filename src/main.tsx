@@ -4,6 +4,8 @@ import './index.css';
 
 const configured = !!import.meta.env.VITE_FIREBASE_API_KEY;
 const App = lazy(() => import('./App.tsx'));
+const GuardianView = lazy(() => import('./components/GuardianView.tsx'));
+const guardianToken = new URLSearchParams(location.search).get('guardian');
 
 function Setup() {
   return (
@@ -24,7 +26,7 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     {configured ? (
       <Suspense fallback={<p className="app muted">Loading…</p>}>
-        <App />
+        {guardianToken ? <GuardianView token={guardianToken} /> : <App />}
       </Suspense>
     ) : (
       <Setup />

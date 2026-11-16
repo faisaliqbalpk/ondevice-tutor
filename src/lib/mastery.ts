@@ -34,6 +34,15 @@ export interface Student {
   levels?: Record<string, string>;
   /** Cloud-written study plan (from an anonymous summary). */
   plan?: string;
+  /** Tutor memory: a short note Nano keeps about how this student learns. Fed into on-device prompts. */
+  memory?: string;
+  memoryAt?: number;
+  /** Recent study activity lines, newest last. Input for the memory note. */
+  activity?: string[];
+  /** Activity lines added since the memory note was last rewritten. */
+  sinceMemory?: number;
+  /** Token of the read-only guardian link, when one has been shared. */
+  guardianToken?: string;
 }
 
 export interface Assessment {
@@ -138,6 +147,14 @@ export function masterySummary(student: Student): string {
       .join('\n') +
     (student.mistakes.length ? `\nRecent mistakes:\n- ${student.mistakes.slice(-5).join('\n- ')}` : '')
   );
+}
+
+/**
+ * Context for on-device prompts: the skill profile plus the tutor's memory note.
+ * Not used for cloud prompts, which only get the anonymous skill summary.
+ */
+export function tutorContext(student: Student): string {
+  return masterySummary(student) + (student.memory ? `\nTutor's notes: ${student.memory}` : '');
 }
 
 /** Applies marked results (from a sheet or a quiz) to the profile and raises alerts. */

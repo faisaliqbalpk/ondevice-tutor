@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { tutorReply, type Turn } from '../lib/tutor';
-import { masterySummary, type Student } from '../lib/mastery';
+import { tutorContext, type Student } from '../lib/mastery';
 import { listen, speak, speechSupported } from '../lib/speech';
 import type { Source } from '../lib/ai';
 import { ErrorNote, SourceBadge } from './common';
@@ -25,7 +25,7 @@ export function TutorChat({ student }: { student: Student }) {
     setMsgs((m) => [...m, { role: 'student', text }]);
     setBusy(true);
     try {
-      const r = await tutorReply(history, text, masterySummary(student));
+      const r = await tutorReply(history, text, tutorContext(student));
       setMsgs((m) => [...m, { role: 'tutor', text: r.data.trim(), source: r.source }]);
       if (voice) speak(r.data);
     } catch (e) {

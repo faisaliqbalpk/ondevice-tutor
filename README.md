@@ -17,6 +17,12 @@ Each task picks its inference mode on purpose:
 | Mark an answer sheet photo | `ONLY_ON_DEVICE`, cloud only after explicit consent | Children's handwriting and names should not leave the device |
 | Generate a practice quiz | `PREFER_ON_DEVICE` | Works offline in classrooms with no signal |
 | Missions: in-character roleplay turns, mission debrief, "make a mission for my weak spot" | `PREFER_ON_DEVICE` | A child's spoken answers stay on the device. Each turn returns JSON (reply, coach tip, objective met) under the same schema on Nano and in the cloud |
+| Solve: step-by-step worked solution for a typed problem, "explain this step" | `PREFER_ON_DEVICE` | Homework help that works offline; the student's tutor memory personalises it without leaving the device |
+| Solve or Reading from a **photo** | `ONLY_ON_DEVICE`, cloud only after explicit consent | Same rule as answer sheets: photos stay on the device by default |
+| Guided Learning: plan a path, write each lesson and its 5-question check | `PREFER_ON_DEVICE` | A full lesson loop with no network |
+| Immersive Reading: explain a paragraph, "what does this mean?" on a highlight, summarize | `PREFER_ON_DEVICE` | A student's reading and notes stay local |
+| Flash cards from mistakes, readings, lessons and solutions | `PREFER_ON_DEVICE` | Mistakes are personal; cards are written where they were made |
+| Tutor memory (a short note on how the student learns) | `PREFER_ON_DEVICE` | Added only to on-device-first prompts, never to cloud-first ones such as the study plan |
 | Voice tutor conversation | `PREFER_ON_DEVICE` | Fast, private, free. Chat history and the student's skill profile are stitched into each prompt, because on-device generation is single-turn |
 | "Why was I wrong?" deep explanation | `PREFER_IN_CLOUD` | Benefits from a larger model. Sends only the skill, question and answers, never names or photos |
 | Study plan | `PREFER_IN_CLOUD` | Sends only an anonymous summary: grade, placement levels and skill scores |
@@ -38,6 +44,15 @@ The Firebase AI Logic calls live in [`src/lib/ai.ts`](src/lib/ai.ts) and [`src/l
   - **Challenge mode:** no free answers. The character refuses to do the work and the student earns a Rookie, Skilled or Master rank.
   - **Hands-free:** the mic opens automatically after the character speaks.
   - **Debrief:** rank, XP, confetti and synthesised sound cues, plus 3 takeaways. Results feed the skill profile; XP, levels, a daily streak and best ranks show on the Progress tab.
+- **Guided Learning with a mastery gate:** Nano plans a 5-6 topic path for a subject, at the student's placement level. Each topic has a short lesson (intro, key ideas, worked example, read-aloud) and a 5-question check. Scoring 80% unlocks the next topic; a miss offers the lesson again, explained another way.
+- **Solve:** type or photograph a problem and get a worked solution one step at a time, with "why" for each step, an "explain this step" box, a way to check the answer, and a similar problem to try (marked on-device).
+- **Immersive Reading:** paste or snap a textbook page. Tap a paragraph for a simpler version with key words and a check question, select words to highlight them or ask what they mean, summarize the page, keep notes, and listen with paragraph-by-paragraph read-aloud.
+- **Daily practice with spaced review:** a 6-question daily set. Questions due for review come back first (Leitner boxes: 1, 3, 7, 14, 30 days; wrong answers return the next day), then new questions on the weakest skills. A daily streak is tracked.
+- **Question bank:** every question answered in quizzes, lesson checks, assessments, daily practice and Solve is saved with its record and next review date. Filter by skill or by "got it wrong" and practise a set.
+- **Flash cards:** generated from mistakes, readings, lessons and solutions, or written by hand, with Again / Hard / Good / Easy spaced repetition.
+- **Tutor memory:** after every few activities Nano rewrites an 80-word note on what the student is good at, what they struggle with and what helps. It is shown on the Progress tab, where it can be refreshed or wiped.
+- **Guardian view:** a read-only progress link for a parent or carer (skills, streaks, paths, placement). It holds scores only: no answers, photos, notes or tutor memory. The student can update or revoke it.
+- **Google sign-in:** students start as guests (anonymous auth). Signing in with Google upgrades the guest account in place, so progress is kept. If that Google account already exists, the guest's progress is copied into it.
 - **Tutor:** push-to-talk voice conversation using the browser's speech recognition (on-device where Chrome supports it) and speech synthesis.
 - **Alerts:** raised when a skill drops below 50%, falls by 30 points, or is newly mastered.
 - **Privacy ledger:** a local log of everything that left the device.
@@ -47,7 +62,7 @@ The Firebase AI Logic calls live in [`src/lib/ai.ts`](src/lib/ai.ts) and [`src/l
 Requirements: Node 20+, a Firebase project, and desktop Chrome 139+ for on-device inference.
 
 1. In the [Firebase console](https://console.firebase.google.com/), create a project and a web app.
-2. Enable **AI Logic** with the Gemini Developer API, **Authentication** with the Anonymous provider, and **Firestore**.
+2. Enable **AI Logic** with the Gemini Developer API, **Authentication** with the **Anonymous** and **Google** providers, and **Firestore**. Deploy the Firestore rules (`firebase deploy --only firestore:rules`).
 3. Enable **App Check** with reCAPTCHA Enterprise and enforce it for AI Logic.
 4. Copy `.env.example` to `.env.local` and fill in your web app config and reCAPTCHA site key.
 5. Install and run:
@@ -77,11 +92,11 @@ npm run deploy
 
 ## Tech stack
 
-Vite, React, TypeScript, Firebase AI Logic (`firebase/ai`) with hybrid inference, Gemini Nano via Chrome's Prompt API, App Check, Anonymous Auth, Firestore with offline persistence, Firebase Hosting.
+Vite, React, TypeScript, Firebase AI Logic (`firebase/ai`) with hybrid inference, Gemini Nano via Chrome's Prompt API, App Check, Firebase Auth (anonymous, upgraded to Google), Firestore with offline persistence, Firebase Hosting.
 
 ## Acknowledgements
 
-Feature ideas were inspired by [HKUDS/DeepTutor](https://github.com/HKUDS/DeepTutor) (Apache-2.0). No code was copied; this project was written from scratch during the hackathon.
+Feature ideas were inspired by [HKUDS/DeepTutor](https://github.com/HKUDS/DeepTutor) (Apache-2.0): Solve mode, Guided Learning, the question bank, Immersive Reading, flash cards, tutor memory and a guardian view are browser-sized, on-device takes on ideas from that project. No code was copied; this project was written from scratch during the hackathon.
 The Missions feature (roleplay scenarios, a teacher mode and a strict immersive mode, ranked mission debriefs) was inspired by [Immersive Language Learning with the Live API](https://github.com/ZackAkil/immersive-language-learning-with-live-api) (Apache-2.0). It was reimplemented here for school subjects with turn-based on-device inference instead of the cloud Live API.
 
 ## License

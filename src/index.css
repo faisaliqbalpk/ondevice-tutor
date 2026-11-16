@@ -203,3 +203,61 @@ h3.diff.expert, .diff-pill.expert { color: var(--bad); }
   .stage *, .confetti, .rank .stars, .xp-gain, .typing { animation: none !important; }
   .confetti { display: none; }
 }
+
+/* ---------- Navigation groups and account ---------- */
+nav.groups { margin-bottom: 8px; }
+.subtabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+.subtabs .chip { padding: 4px 12px; font-size: 0.9rem; }
+.account { display: flex; gap: 8px; align-items: center; }
+button.google { display: inline-flex; gap: 8px; align-items: center; background: var(--panel); color: var(--text); border: 1px solid var(--line); }
+.avatar-img { width: 24px; height: 24px; border-radius: 50%; }
+
+/* ---------- Solve ---------- */
+.steps { padding-left: 20px; display: grid; gap: 10px; }
+.step { border-left: 3px solid var(--accent); padding: 4px 0 4px 10px; }
+.step .work { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.92rem; background: var(--bg); border-radius: 6px; padding: 6px 8px; }
+.answer-box { background: var(--ok-bg); border: 1px solid var(--device); border-radius: 8px; padding: 10px 12px; }
+
+/* ---------- Guided learning ---------- */
+.path { display: grid; gap: 8px; margin-top: 12px; }
+.topics { list-style: none; padding: 0; display: grid; gap: 6px; }
+.topic-btn { width: 100%; display: flex; gap: 10px; align-items: center; text-align: left; white-space: normal; background: var(--panel); color: var(--text); border: 1px solid var(--line); }
+.topic.open .topic-btn { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.topic.passed .topic-btn { background: var(--ok-bg); }
+.topic.locked .topic-btn { opacity: 0.55; }
+.topic-icon { font-size: 1.2rem; }
+.topic-body { display: flex; flex-direction: column; flex: 1; }
+.gate { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 12px; }
+.gate.won h3 { color: var(--device); }
+
+/* ---------- Immersive reading ---------- */
+.reading-list { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; }
+.reading-list .mission-card { width: 100%; }
+.reader { display: grid; gap: 4px; margin: 8px 0 16px; }
+.para { border-radius: 8px; padding: 6px 10px; border-left: 3px solid transparent; }
+.para p { font-size: 1.08rem; line-height: 1.75; margin: 0 0 4px; }
+.para .row { margin: 0 0 6px; opacity: 0.6; }
+.para:hover .row, .para:focus-within .row { opacity: 1; }
+.para.reading { background: var(--cloud-bg); border-left-color: var(--cloud); }
+mark { background: #fde68a; color: #1d1d1b; border-radius: 3px; padding: 0 2px; }
+.selbar { position: sticky; top: 8px; z-index: 2; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; background: var(--panel); border: 1px solid var(--accent); border-radius: 10px; padding: 8px 10px; margin: 8px 0; box-shadow: 0 4px 12px rgb(0 0 0 / 0.12); }
+.selbar .coach-tip { flex-basis: 100%; max-width: none; margin: 0; }
+.hl-chip { display: inline-flex; gap: 4px; align-items: center; }
+
+/* ---------- Daily practice, flash cards ---------- */
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin: 12px 0; }
+.stats > div { background: var(--bg); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; }
+.stats strong { font-size: 1.4rem; }
+.flash-wrap { display: grid; gap: 10px; justify-items: center; margin: 12px 0; }
+.flash { width: min(100%, 460px); min-height: 200px; white-space: normal; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 6px 18px rgb(0 0 0 / 0.08); transition: transform 0.35s; }
+.flash.flipped { background: var(--ok-bg); transform: rotateX(360deg); }
+.flash-face { display: flex; flex-direction: column; gap: 10px; align-items: center; justify-content: center; min-height: 180px; }
+.flash-text { font-size: 1.25rem; font-weight: 600; }
+button.grade.again { background: var(--bad); }
+button.grade.hard { background: var(--cloud); }
+button.grade.good { background: var(--accent); }
+button.grade.easy { background: var(--device); }
+.memory { margin-top: 16px; }
+@media (prefers-reduced-motion: reduce) {
+  .flash { transition: none; }
+}
