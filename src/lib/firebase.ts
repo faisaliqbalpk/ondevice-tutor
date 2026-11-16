@@ -37,7 +37,7 @@ export const db = initializeFirestore(firebaseApp, {
 
 export const auth = getAuth(firebaseApp);
 
-let userPromise: Promise<User> | null = null;
+let anonPromise: Promise<User> | null = null;
 
 /**
  * Resolves with the signed-in user, signing in anonymously once if needed.
@@ -45,14 +45,19 @@ let userPromise: Promise<User> | null = null;
  * two anonymous users, which would leave listeners on the wrong user's path.
  */
 export function waitForUser(): Promise<User> {
-  userPromise ??= (async () => {
+  anonPromise ??= (async () => {
     await auth.authStateReady();
     if (auth.currentUser) return auth.currentUser;
     const cred = await signInAnonymously(auth);
     return cred.user;
   })().catch((e) => {
-    userPromise = null;
+    anonPromise = null;
     throw e;
   });
-  return userPromise;
+  return anonPromise;
+}
+
+/** Lets the next waitForUser() start a fresh anonymous session (after sign-out). */
+export function resetAnonymousSession() {
+  anonPromise = null;
 }

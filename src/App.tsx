@@ -1,5 +1,10 @@
 import { useEffect, useState } from 'react';
-import { waitForUser } from './lib/firebase';
+import { watchAccount, type Account as AccountT } from './lib/auth';
+import { Account } from './components/Account';
+import { Solve } from './components/Solve';
+import { Learn } from './components/Learn';
+import { Reading } from './components/Reading';
+import { Review } from './components/Review';
 import { chromeVersion, deviceStatus, prepareDeviceModel, type DeviceStatus } from './lib/ai';
 import { addStudent, watchAlerts, watchStudents, type Alert, type Student } from './lib/mastery';
 import { MarkSheet } from './components/MarkSheet';
@@ -13,17 +18,61 @@ import { Missions } from './components/Missions';
 import { answerKeyText, type Assessment } from './lib/mastery';
 import { errorText } from './lib/errors';
 
-type Tab = 'start' | 'assess' | 'mark' | 'practice' | 'missions' | 'tutor' | 'progress' | 'privacy';
-const TABS: { id: Tab; label: string }[] = [
-  { id: 'start', label: 'Interview' },
-  { id: 'assess', label: 'Assessments' },
-  { id: 'mark', label: 'Mark sheet' },
-  { id: 'practice', label: 'Practice' },
-  { id: 'missions', label: 'Missions' },
-  { id: 'tutor', label: 'Tutor' },
-  { id: 'progress', label: 'Progress' },
-  { id: 'privacy', label: 'Privacy' },
+type Tab =
+  | 'learn'
+  | 'read'
+  | 'solve'
+  | 'tutor'
+  | 'daily'
+  | 'cards'
+  | 'practice'
+  | 'missions'
+  | 'bank'
+  | 'start'
+  | 'assess'
+  | 'mark'
+  | 'progress'
+  | 'privacy';
+
+/** Tabs grouped the way a student thinks about them: learn something, practise it, check it, see progress. */
+const GROUPS: { label: string; tabs: { id: Tab; label: string }[] }[] = [
+  {
+    label: 'Learn',
+    tabs: [
+      { id: 'learn', label: 'Guided path' },
+      { id: 'read', label: 'Reading' },
+      { id: 'solve', label: 'Solve' },
+      { id: 'tutor', label: 'Voice tutor' },
+    ],
+  },
+  {
+    label: 'Practise',
+    tabs: [
+      { id: 'daily', label: 'Today' },
+      { id: 'cards', label: 'Flash cards' },
+      { id: 'practice', label: 'Quiz' },
+      { id: 'missions', label: 'Missions' },
+      { id: 'bank', label: 'Question bank' },
+    ],
+  },
+  {
+    label: 'Assess',
+    tabs: [
+      { id: 'start', label: 'Interview' },
+      { id: 'assess', label: 'Assessments' },
+      { id: 'mark', label: 'Mark sheet' },
+    ],
+  },
+  {
+    label: 'Progress',
+    tabs: [
+      { id: 'progress', label: 'Progress & guardian' },
+      { id: 'privacy', label: 'Privacy ledger' },
+    ],
+  },
 ];
+
+const groupOf = (t: Tab) => GROUPS.find((g) => g.tabs.some((x) => x.id === t)) ?? GROUPS[0];
 
 const STATUS_TEXT: Record<DeviceStatus, string> = {
   available: 'Gemini Nano ready on this device',
@@ -49,7 +98,8 @@ function useOnline() {
 }
 
 export default function App() {
-  const [uid, setUid] = useState<string | null>(null);
+  const [account, setAccount] = useState<AccountT | null>(null);
+  const uid = account?.uid ?? null;
   const [authError, setAuthError] = useState<string | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
@@ -65,10 +115,18 @@ export default function App() {
   const online = useOnline();
 
   useEffect(() => {
-    waitForUser()
-      .then((u) => setUid(u.uid))
-      .catch((e) => setAuthError(errorText(e)));
+    const off = watchAccount(
+      (a) => {
+        // A different account (signed in or out) has different students.
+        setAccount(a);
+        setStudents([]);
+        setCurrent(null);
+        if (a) setAuthError(null);
+      },
+      (e) => setAuthError(errorText(e)),
+    );
     void deviceStatus().then(setStatus);
+    return off;
   }, []);
 
   useEffect(() => {
@@ -93,6 +151,11 @@ export default function App() {
     }
     setProgress(null);
     setStatus(await deviceStatus());
+  }
+
+  function toast(t: string) {
+    setToasts((x) => [...x, t]);
+    setTimeout(() => setToasts((x) => x.slice(1)), 6000);
   }
 
   function onAlerts(a: string[]) {
@@ -145,6 +208,7 @@ export default function App() {
           )}
           {progress !== null && <span className="muted">Downloading {Math.round(progress * 100)}%</span>}
           <span className={`pill ${online ? '' : 'offline'}`}>{online ? 'Online' : 'Offline'}</span>
+          <Account account={account} onToast={toast} />
         </div>
       </header>
 
@@ -206,13 +270,24 @@ export default function App() {
         </form>
       </div>
 
-      <nav className="no-print">
-        {TABS.map((t) => (
-          <button key={t.id} className={t.id === tab ? 'tab active' : 'tab'} onClick={() => setTab(t.id)}>
-            {t.label}
+      <nav className="no-print groups">
+        {GROUPS.map((g) => (
+          <button
+            key={g.label}
+            className={g === groupOf(tab) ? 'tab active' : 'tab'}
+            onClick={() => g !== groupOf(tab) && setTab(g.tabs[0].id)}
+          >
+            {g.label}
           </button>
         ))}
       </nav>
+      <div className="subtabs no-print">
+        {groupOf(tab).tabs.map((t) => (
+          <button key={t.id} className={t.id === tab ? 'chip active' : 'chip'} onClick={() => setTab(t.id)}>
+            {t.label}
+          </button>
+        ))}
+      </div>
 
       <main>
         {tab === 'privacy' ? (
@@ -222,7 +297,7 @@ export default function App() {
         ) : !student ? (
           <p className="panel muted">Add a student to get started. Use a nickname, not a full name.</p>
         ) : tab === 'start' ? (
-          <Onboarding key={student.id} uid={uid} student={student} onAlerts={onAlerts} onDone={() => setTab('assess')} />
+          <Onboarding key={student.id} uid={uid} student={student} onAlerts={onAlerts} onDone={() => setTab('learn')} />
         ) : tab === 'assess' ? (
           <Assessments key={student.id} uid={uid} student={student} onAlerts={onAlerts} onMarkPrinted={markPrinted} />
         ) : tab === 'mark' ? (
@@ -231,6 +306,14 @@ export default function App() {
           <Practice key={student.id} uid={uid} student={student} onAlerts={onAlerts} />
         ) : tab === 'missions' ? (
           <Missions key={student.id} uid={uid} student={student} onAlerts={onAlerts} />
+        ) : tab === 'learn' ? (
+          <Learn key={student.id} uid={uid} student={student} onAlerts={onAlerts} onToast={toast} />
+        ) : tab === 'read' ? (
+          <Reading key={student.id} uid={uid} student={student} onToast={toast} />
+        ) : tab === 'solve' ? (
+          <Solve key={student.id} uid={uid} student={student} onAlerts={onAlerts} onToast={toast} />
+        ) : tab === 'daily' || tab === 'cards' || tab === 'bank' ? (
+          <Review key={student.id} uid={uid} student={student} view={tab} onAlerts={onAlerts} onToast={toast} />
         ) : tab === 'tutor' ? (
           <TutorChat key={student.id} student={student} />
         ) : (

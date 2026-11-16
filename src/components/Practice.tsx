@@ -3,6 +3,7 @@ import { makeQuiz, explainMistake, type Quiz } from '../lib/tutor';
 import { recordResults, weakestSkills, type Student } from '../lib/mastery';
 import type { Source } from '../lib/ai';
 import { ErrorNote, SourceBadge } from './common';
+import { saveToBank } from '../lib/study';
 import { errorText } from '../lib/errors';
 
 interface Props {
@@ -48,6 +49,19 @@ export function Practice({ uid, student, onAlerts }: Props) {
           ? undefined
           : `${q.skill}: "${q.prompt}" answered "${q.choices[picked[i]] ?? 'no answer'}"`,
     }));
+    void saveToBank(
+      uid,
+      student.id,
+      quiz.data.questions.map((q, i) => ({
+        prompt: q.prompt,
+        choices: q.choices,
+        answer: q.choices[q.answerIndex] ?? '',
+        skill: q.skill,
+        hint: q.hint,
+        origin: 'quiz' as const,
+        result: picked[i] === q.answerIndex,
+      })),
+    );
     onAlerts(await recordResults(uid, student, results));
   }
 
