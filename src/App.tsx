@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { watchAccount, type Account as AccountT } from './lib/auth';
 import { Account } from './components/Account';
+import { AuthPage } from './components/AuthPage';
 import { Solve } from './components/Solve';
 import { Learn } from './components/Learn';
 import { Reading } from './components/Reading';
@@ -98,9 +99,11 @@ function useOnline() {
 }
 
 export default function App() {
-  const [account, setAccount] = useState<AccountT | null>(null);
-  const uid = account?.uid ?? null;
-  const [authError, setAuthError] = useState<string | null>(null);
+  // undefined while Firebase restores the session, null when signed out.
+  const [account, setAccount] = useState<AccountT | null | undefined>(undefined);
+  // Only real accounts get in. A leftover guest session has to sign up or log in first (its progress is kept).
+  const signedIn = account && !account.anonymous ? account : null;
+  const uid = signedIn?.uid ?? null;
   const [students, setStudents] = useState<Student[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [current, setCurrent] = useState<string | null>(null);
@@ -113,18 +116,16 @@ export default function App() {
   const [newName, setNewName] = useState('');
   const [newGrade, setNewGrade] = useState('Grade 6');
   const online = useOnline();
+  const uidRef = useRef<string | null>(null);
 
   useEffect(() => {
-    const off = watchAccount(
-      (a) => {
-        // A different account (signed in or out) has different students.
-        setAccount(a);
-        setStudents([]);
-        setCurrent(null);
-        if (a) setAuthError(null);
-      },
-      (e) => setAuthError(errorText(e)),
-    );
+    const off = watchAccount((a) => {
+      setAccount(a);
+      // A different account (signed in or out) has different students.
+      setCurrent((c) => (a?.uid === uidRef.current ? c : null));
+      if (a?.uid !== uidRef.current) setStudents([]);
+      uidRef.current = a?.uid ?? null;
+    });
     void deviceStatus().then(setStatus);
     return off;
   }, []);
@@ -186,6 +187,9 @@ export default function App() {
     setTab('mark');
   }
 
+  if (account === undefined) return <p className="app muted">Loading…</p>;
+  if (!signedIn) return <AuthPage hasGuestProgress={!!account?.anonymous} />;
+
   return (
     <div className="app">
       <header className="no-print">
@@ -208,7 +212,7 @@ export default function App() {
           )}
           {progress !== null && <span className="muted">Downloading {Math.round(progress * 100)}%</span>}
           <span className={`pill ${online ? '' : 'offline'}`}>{online ? 'Online' : 'Offline'}</span>
-          <Account account={account} onToast={toast} />
+          <Account account={signedIn} />
         </div>
       </header>
 
@@ -248,8 +252,6 @@ export default function App() {
           </button>
         </div>
       )}
-
-      {authError && <p className="error">Sign-in failed: {authError}. Check your Firebase config.</p>}
 
       <div className="students no-print">
         {students.map((s) => (

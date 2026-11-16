@@ -52,7 +52,7 @@ The Firebase AI Logic calls live in [`src/lib/ai.ts`](src/lib/ai.ts) and [`src/l
 - **Flash cards:** generated from mistakes, readings, lessons and solutions, or written by hand, with Again / Hard / Good / Easy spaced repetition.
 - **Tutor memory:** after every few activities Nano rewrites an 80-word note on what the student is good at, what they struggle with and what helps. It is shown on the Progress tab, where it can be refreshed or wiped.
 - **Guardian view:** a read-only progress link for a parent or carer (skills, streaks, paths, placement). It holds scores only: no answers, photos, notes or tutor memory. The student can update or revoke it.
-- **Google sign-in:** students start as guests (anonymous auth). Signing in with Google upgrades the guest account in place, so progress is kept. If that Google account already exists, the guest's progress is copied into it.
+- **Accounts:** a sign up / log in page (email and password, or Google) guards the app; nothing else is shown until you are signed in. Includes password reset. Browsers that still hold a guest session from earlier versions keep their progress: signing up upgrades the guest in place, and logging in to an existing account copies the guest's progress into it. The guardian link still opens without an account.
 - **Tutor:** push-to-talk voice conversation using the browser's speech recognition (on-device where Chrome supports it) and speech synthesis.
 - **Alerts:** raised when a skill drops below 50%, falls by 30 points, or is newly mastered.
 - **Privacy ledger:** a local log of everything that left the device.
@@ -62,7 +62,7 @@ The Firebase AI Logic calls live in [`src/lib/ai.ts`](src/lib/ai.ts) and [`src/l
 Requirements: Node 20+, a Firebase project, and desktop Chrome 139+ for on-device inference.
 
 1. In the [Firebase console](https://console.firebase.google.com/), create a project and a web app.
-2. Enable **AI Logic** with the Gemini Developer API, **Authentication** with the **Anonymous** and **Google** providers, and **Firestore**. Deploy the Firestore rules (`firebase deploy --only firestore:rules`).
+2. Enable **AI Logic** with the Gemini Developer API, **Authentication** with the **Email/Password** and **Google** providers, and **Firestore**. Deploy the Firestore rules (`firebase deploy --only firestore:rules`).
 3. Enable **App Check** with reCAPTCHA Enterprise and enforce it for AI Logic.
 4. Copy `.env.example` to `.env.local` and fill in your web app config and reCAPTCHA site key.
 5. Install and run:
@@ -92,7 +92,7 @@ npm run deploy
 
 ## Tech stack
 
-Vite, React, TypeScript, Firebase AI Logic (`firebase/ai`) with hybrid inference, Gemini Nano via Chrome's Prompt API, App Check, Firebase Auth (anonymous, upgraded to Google), Firestore with offline persistence, Firebase Hosting.
+Vite, React, TypeScript, Firebase AI Logic (`firebase/ai`) with hybrid inference, Gemini Nano via Chrome's Prompt API, App Check, Firebase Auth (email/password and Google), Firestore with offline persistence, Firebase Hosting.
 
 ## Acknowledgements
 
