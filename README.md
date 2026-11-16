@@ -16,6 +16,7 @@ Each task picks its inference mode on purpose:
 | Create an assessment / mark short answers | `PREFER_ON_DEVICE` | Teachers can build and mark tests offline |
 | Mark an answer sheet photo | `ONLY_ON_DEVICE`, cloud only after explicit consent | Children's handwriting and names should not leave the device |
 | Generate a practice quiz | `PREFER_ON_DEVICE` | Works offline in classrooms with no signal |
+| Missions: in-character roleplay turns, mission debrief, "make a mission for my weak spot" | `PREFER_ON_DEVICE` | A child's spoken answers stay on the device. Each turn returns JSON (reply, coach tip, objective met) under the same schema on Nano and in the cloud |
 | Voice tutor conversation | `PREFER_ON_DEVICE` | Fast, private, free. Chat history and the student's skill profile are stitched into each prompt, because on-device generation is single-turn |
 | "Why was I wrong?" deep explanation | `PREFER_IN_CLOUD` | Benefits from a larger model. Sends only the skill, question and answers, never names or photos |
 | Study plan | `PREFER_IN_CLOUD` | Sends only an anonymous summary: grade, placement levels and skill scores |
@@ -32,6 +33,11 @@ The Firebase AI Logic calls live in [`src/lib/ai.ts`](src/lib/ai.ts) and [`src/l
 - **Mark sheet:** photo of an answer sheet plus an answer key. Nano reads each answer, marks it, tags the skill, flags low-confidence readings, and gives short feedback.
 - **Skill memory:** a per-student profile of recent mastery per skill, stored in Firestore with offline persistence. No photos are stored.
 - **Practice:** a 5-question quiz targeting the two weakest skills and recent mistakes, with hints.
+- **Missions (immersive roleplay):** talk your way through real-life scenarios that use a school skill, such as splitting pizza with a hungry friend (fractions), giving change at a market stall (decimals), explaining photosynthesis to an alien, or debugging a robot chef (algorithms). Nano plays the character, each with its own voice, while an animated avatar, a live mic-level visualiser and a running transcript show the conversation. Missions are sorted Easy to Expert, and Nano can write a new one for the student's weakest skill.
+  - **Coach mode:** gentle corrections, nudges and quick checks appear as coach tips beside the conversation.
+  - **Challenge mode:** no free answers. The character refuses to do the work and the student earns a Rookie, Skilled or Master rank.
+  - **Hands-free:** the mic opens automatically after the character speaks.
+  - **Debrief:** rank, XP, confetti and synthesised sound cues, plus 3 takeaways. Results feed the skill profile; XP, levels, a daily streak and best ranks show on the Progress tab.
 - **Tutor:** push-to-talk voice conversation using the browser's speech recognition (on-device where Chrome supports it) and speech synthesis.
 - **Alerts:** raised when a skill drops below 50%, falls by 30 points, or is newly mastered.
 - **Privacy ledger:** a local log of everything that left the device.
@@ -76,6 +82,7 @@ Vite, React, TypeScript, Firebase AI Logic (`firebase/ai`) with hybrid inference
 ## Acknowledgements
 
 Feature ideas were inspired by [HKUDS/DeepTutor](https://github.com/HKUDS/DeepTutor) (Apache-2.0). No code was copied; this project was written from scratch during the hackathon.
+The Missions feature (roleplay scenarios, a teacher mode and a strict immersive mode, ranked mission debriefs) was inspired by [Immersive Language Learning with the Live API](https://github.com/ZackAkil/immersive-language-learning-with-live-api) (Apache-2.0). It was reimplemented here for school subjects with turn-based on-device inference instead of the cloud Live API.
 
 ## License
 

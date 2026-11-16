@@ -9,15 +9,17 @@ import { Progress } from './components/Progress';
 import { Ledger } from './components/Ledger';
 import { Onboarding } from './components/Onboarding';
 import { Assessments } from './components/Assessments';
+import { Missions } from './components/Missions';
 import { answerKeyText, type Assessment } from './lib/mastery';
 import { errorText } from './lib/errors';
 
-type Tab = 'start' | 'assess' | 'mark' | 'practice' | 'tutor' | 'progress' | 'privacy';
+type Tab = 'start' | 'assess' | 'mark' | 'practice' | 'missions' | 'tutor' | 'progress' | 'privacy';
 const TABS: { id: Tab; label: string }[] = [
   { id: 'start', label: 'Interview' },
   { id: 'assess', label: 'Assessments' },
   { id: 'mark', label: 'Mark sheet' },
   { id: 'practice', label: 'Practice' },
+  { id: 'missions', label: 'Missions' },
   { id: 'tutor', label: 'Tutor' },
   { id: 'progress', label: 'Progress' },
   { id: 'privacy', label: 'Privacy' },
@@ -227,10 +229,12 @@ export default function App() {
           <MarkSheet key={`${student.id}:${preset?.key ?? ''}`} uid={uid} student={student} onAlerts={onAlerts} preset={preset} />
         ) : tab === 'practice' ? (
           <Practice key={student.id} uid={uid} student={student} onAlerts={onAlerts} />
+        ) : tab === 'missions' ? (
+          <Missions key={student.id} uid={uid} student={student} onAlerts={onAlerts} />
         ) : tab === 'tutor' ? (
           <TutorChat key={student.id} student={student} />
         ) : (
-          <Progress student={student} alerts={alerts} />
+          <Progress uid={uid} student={student} alerts={alerts} />
         )}
       </main>
 
